@@ -1,3 +1,4 @@
+import { cleanDdbImageUrl } from '../utils/image';
 import { CharacterData, MonsterData, ItemData } from '../types';
 
 export function escapeYamlString(str?: string | number | null): string {
@@ -20,12 +21,13 @@ export function toYamlArray(items: Array<string | number>, indent = 2): string {
  * Formats a CharacterData object into Foundry-compatible Markdown with YAML frontmatter
  */
 export function characterToMarkdown(c: CharacterData): string {
-  const avatar = c.avatarUrl ? `![${c.name}](${c.avatarUrl})\n\n` : '';
+  const cleanAvatarUrl = cleanDdbImageUrl(c.avatarUrl);
+  const avatar = cleanAvatarUrl ? `![${c.name}](${cleanAvatarUrl})\n\n` : '';
 
   const frontmatter = `---
 name: ${escapeYamlString(c.name)}
 type: "character"
-image: ${escapeYamlString(c.avatarUrl)}
+image: ${escapeYamlString(cleanAvatarUrl)}
 species: ${escapeYamlString(c.species)}
 class: ${escapeYamlString(c.classLine)}
 background: ${escapeYamlString(c.background)}
@@ -215,12 +217,13 @@ ${skillsOutput.join('\n')}
  * Formats a MonsterData object into Foundry-compatible Markdown with YAML frontmatter
  */
 export function monsterToMarkdown(m: MonsterData): string {
-  const imgMarkdown = m.imageUrl ? `![${m.name}](${m.imageUrl})\n\n` : '';
+  const cleanImgUrl = cleanDdbImageUrl(m.imageUrl);
+  const imgMarkdown = cleanImgUrl ? `![${m.name}](${cleanImgUrl})\n\n` : '';
 
   const frontmatter = `---
 name: ${escapeYamlString(m.name)}
 type: "npc"
-image: ${escapeYamlString(m.imageUrl)}
+image: ${escapeYamlString(cleanImgUrl)}
 cr: "${m.cr}"
 xp: ${m.xp}
 size: ${escapeYamlString(m.size)}
@@ -314,7 +317,8 @@ ${imgMarkdown}*${m.size} ${m.type}, ${m.alignment}*
  * Formats an ItemData object into Markdown with YAML frontmatter
  */
 export function itemToMarkdown(item: ItemData): string {
-  const imgMarkdown = item.image ? `![${item.name}](${item.image})\n\n` : '';
+  const cleanImgUrl = cleanDdbImageUrl(item.image);
+  const imgMarkdown = cleanImgUrl ? `![${item.name}](${cleanImgUrl})\n\n` : '';
 
   const frontmatter = `---
 name: ${escapeYamlString(item.name)}
@@ -322,7 +326,7 @@ type: "item"
 item_type: ${escapeYamlString(item.type)}
 rarity: ${escapeYamlString(item.rarity || 'Common')}
 attunement: ${item.requiresAttunement}
-image: ${escapeYamlString(item.image)}
+image: ${escapeYamlString(cleanImgUrl)}
 source: ${escapeYamlString(item.source)}
 ---`;
 

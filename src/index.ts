@@ -12,3 +12,4 @@ export * from './formatters/markdown';
 // Export Utilities
 export * from './utils/html';
 export * from './utils/modifiers';
+export * from './utils/image';

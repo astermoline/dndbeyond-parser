@@ -1,3 +1,4 @@
+import { cleanDdbImageUrl } from '../utils/image';
 import { resolveFetch } from '../utils/fetch';
 import {
   CharacterData,
@@ -295,7 +296,7 @@ export function parseCharacterJson(d: any): CharacterData {
       attunementDescription: def.attunementDescription || undefined,
       weight: wt,
       cost: def.cost ? `${def.cost} gp` : undefined,
-      image: def.avatarUrl || def.largeAvatarUrl || undefined,
+      image: cleanDdbImageUrl(def.largeAvatarUrl || def.avatarUrl),
       description: htmlToMarkdown(def.description),
       notes: notes.length ? notes : undefined,
       tags: def.tags || [],
@@ -468,7 +469,7 @@ export function parseCharacterJson(d: any): CharacterData {
   return {
     id: d.id,
     name: d.name || 'Unnamed Character',
-    avatarUrl: d.decorations?.avatarUrl || undefined,
+    avatarUrl: cleanDdbImageUrl(d.decorations?.avatarUrl || d.avatarUrl),
     species,
     classes,
     totalLevel,

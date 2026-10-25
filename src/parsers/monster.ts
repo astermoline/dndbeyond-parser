@@ -1,3 +1,4 @@
+import { cleanDdbImageUrl } from '../utils/image';
 import { resolveFetch } from '../utils/fetch';
 import { MonsterData, AbilityName, AbilityScoreData, ActionItemData } from '../types';
 import { formatModifier, ALIGNMENTS } from '../utils/modifiers';
@@ -228,7 +229,7 @@ export function parseMonsterJson(d: any): MonsterData {
   return {
     id: d.id,
     name: d.name || 'Unnamed Monster',
-    imageUrl: d.largeAvatarUrl || d.avatarUrl || undefined,
+    imageUrl: cleanDdbImageUrl(d.largeAvatarUrl || d.avatarUrl),
     cr: crInfo.cr,
     xp: crInfo.xp,
     size,
@@ -446,7 +447,7 @@ export function parseMonsterDom(root: HTMLElement | Document): MonsterData {
   const lairActions = parseDomSection('LAIR');
 
   const imgEl = root.querySelector(`${prefix}__image img, .monster-image-lightbox-link img`) as HTMLImageElement | null;
-  const imageUrl = imgEl?.src || undefined;
+  const imageUrl = cleanDdbImageUrl(imgEl?.src);
 
   return {
     name,

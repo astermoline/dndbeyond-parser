@@ -1,3 +1,4 @@
+import { cleanDdbImageUrl } from '../utils/image';
 import { ItemData } from '../types';
 import { htmlToMarkdown } from '../utils/html';
 import { resolveFetch } from '../utils/fetch';
@@ -47,7 +48,7 @@ export function parseItemTooltipJson(tooltipObj: any): ItemData {
 
   // Extract icon image
   const imgMatch = rawHtml.match(/url\(['"]([^'"]+)['"]\)/i);
-  const image = imgMatch ? imgMatch[1] : undefined;
+  const image = cleanDdbImageUrl(imgMatch ? imgMatch[1] : undefined);
 
   // Extract byline: "Wondrous Item, uncommon (requires attunement)"
   const bylineMatch = rawHtml.match(/<div class="details-byline"[^>]*>([\s\S]*?)<\/div>/i);
@@ -116,7 +117,7 @@ export function parseItemDom(root: HTMLElement | Document): ItemData {
     } else if (rawImage.startsWith('/')) {
       rawImage = 'https://www.dndbeyond.com' + rawImage;
     }
-    image = rawImage;
+    image = cleanDdbImageUrl(rawImage);
   }
 
   // Details byline: "Wondrous Item, uncommon (requires attunement)"

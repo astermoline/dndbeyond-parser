@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import {
+  cleanDdbImageUrl,
   parseCharacterJson,
   parseMonsterJson,
   parseItemTooltipJson,
@@ -61,6 +62,16 @@ describe('Character Parser', () => {
     expect(md).toContain('## Features & Talents');
     expect(md).toContain('## Inventory');
     expect(md).toContain('## Spellcasting');
+    expect(md).toContain('image: "https://www.dndbeyond.com/avatars/59123/23/1581111423-131447412.jpeg"');
+    expect(md).not.toContain('?width=150');
+  });
+  it('strips resizing query string parameters from character avatar URL', () => {
+    const char = parseCharacterJson(rizJson);
+    expect(char.avatarUrl).toBe('https://www.dndbeyond.com/avatars/59123/23/1581111423-131447412.jpeg');
+    expect(char.avatarUrl).not.toContain('?width=150');
+
+    const sampleUrl = 'https://www.dndbeyond.com/avatars/59417/207/1581111423-170163364.jpeg?width=150&height=150&fit=crop&quality=95&auto=webp';
+    expect(cleanDdbImageUrl(sampleUrl)).toBe('https://www.dndbeyond.com/avatars/59417/207/1581111423-170163364.jpeg');
   });
 });
 
