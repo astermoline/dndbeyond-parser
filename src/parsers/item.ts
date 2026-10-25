@@ -96,9 +96,28 @@ export function parseItemTooltipJson(tooltipObj: any): ItemData {
 export function parseItemDom(root: HTMLElement | Document): ItemData {
   // Name
   const titleEl = root.querySelector('.page-title') || root.querySelector('h1.page-heading');
-  const imgEl = root.querySelector('.magic-item-image, .item-details .image img') as HTMLImageElement | null;
+
+  // Prefer high-resolution lightbox anchor href, then img element
+  const lightboxAnchor = root.querySelector(
+    '.item-details .image a[data-lightbox], .image a[data-lightbox], a.link-full, .item-details .image a, .image a'
+  ) as HTMLAnchorElement | null;
+  const imgEl = root.querySelector(
+    '.magic-item-image, .item-details .image img, .image img, .item-info img'
+  ) as HTMLImageElement | null;
+
   const name = titleEl?.textContent?.trim() || imgEl?.alt?.trim() || 'Unnamed Item';
-  const image = imgEl?.src || undefined;
+
+  let rawImage = lightboxAnchor?.getAttribute('href') || imgEl?.getAttribute('src') || imgEl?.src;
+  let image: string | undefined = undefined;
+
+  if (rawImage && !rawImage.startsWith('javascript:')) {
+    if (rawImage.startsWith('//')) {
+      rawImage = 'https:' + rawImage;
+    } else if (rawImage.startsWith('/')) {
+      rawImage = 'https://www.dndbeyond.com' + rawImage;
+    }
+    image = rawImage;
+  }
 
   // Details byline: "Wondrous Item, uncommon (requires attunement)"
   const detailsEl = root.querySelector('.item-details .details, .item-info .details');
