@@ -1,3 +1,4 @@
+import { resolveFetch } from '../utils/fetch';
 import { MonsterData, AbilityName, AbilityScoreData, ActionItemData } from '../types';
 import { formatModifier, ALIGNMENTS } from '../utils/modifiers';
 import { htmlToMarkdown } from '../utils/html';
@@ -25,12 +26,9 @@ export async function fetchMonsterById(
   }
 
   const url = `https://monster-service.dndbeyond.com/v1/Monster/${id}`;
-  const fetcher = options.fetchFn || (typeof fetch !== 'undefined' ? fetch : undefined);
-  if (!fetcher) {
-    throw new Error('No fetch implementation available. Pass options.fetchFn.');
-  }
+  const fetcher = resolveFetch(options.fetchFn);
 
-  const response = await fetcher(url, {
+  const response = await fetcher.call(globalThis, url, {
     headers: { Accept: 'application/json' },
   });
 

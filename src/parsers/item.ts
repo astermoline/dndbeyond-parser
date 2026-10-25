@@ -1,5 +1,6 @@
 import { ItemData } from '../types';
 import { htmlToMarkdown } from '../utils/html';
+import { resolveFetch } from '../utils/fetch';
 
 export function extractItemId(urlOrId: string | number): number | null {
   if (typeof urlOrId === 'number') return urlOrId;
@@ -21,12 +22,9 @@ export async function fetchItemTooltipJson(
 
   const endpoint = options.isMagicItem !== false ? 'magic-items' : 'equipment';
   const url = `https://www.dndbeyond.com/${endpoint}/${id}/tooltip-json`;
-  const fetcher = options.fetchFn || (typeof fetch !== 'undefined' ? fetch : undefined);
-  if (!fetcher) {
-    throw new Error('No fetch implementation available. Pass options.fetchFn.');
-  }
+  const fetcher = resolveFetch(options.fetchFn);
 
-  const response = await fetcher(url, {
+  const response = await fetcher.call(globalThis, url, {
     headers: { Accept: 'application/json' },
   });
 

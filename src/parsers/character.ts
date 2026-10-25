@@ -1,3 +1,4 @@
+import { resolveFetch } from '../utils/fetch';
 import {
   CharacterData,
   ClassLevelData,
@@ -47,12 +48,9 @@ export async function fetchCharacterById(
     headers['Cookie'] = `CobaltSession=${options.cobaltSession}`;
   }
 
-  const fetcher = options.fetchFn || (typeof fetch !== 'undefined' ? fetch : undefined);
-  if (!fetcher) {
-    throw new Error('No fetch implementation available. Pass options.fetchFn.');
-  }
+  const fetcher = resolveFetch(options.fetchFn);
 
-  const response = await fetcher(url, {
+  const response = await fetcher.call(globalThis, url, {
     headers,
     credentials: 'include',
   });
