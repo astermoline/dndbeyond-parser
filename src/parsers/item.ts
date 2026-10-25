@@ -4,10 +4,10 @@ import { resolveFetch } from '../utils/fetch';
 
 export function extractItemId(urlOrId: string | number): number | null {
   if (typeof urlOrId === 'number') return urlOrId;
-  const match = String(urlOrId).match(/\/(?:magic-items|equipment)\/(\d+)/);
+  const str = String(urlOrId).trim();
+  const match = str.match(/\/(?:magic-items|equipment)\/(\d+)/);
   if (match) return parseInt(match[1], 10);
-  const numericOnly = String(urlOrId).replace(/[^\d]/g, '');
-  if (numericOnly) return parseInt(numericOnly, 10);
+  if (/^\d+$/.test(str)) return parseInt(str, 10);
   return null;
 }
 

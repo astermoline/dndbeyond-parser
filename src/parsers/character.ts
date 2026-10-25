@@ -23,13 +23,13 @@ export interface FetchCharacterOptions {
   fetchFn?: typeof fetch;
 }
 
-export function extractCharacterId(urlOrId: string | number): number {
+export function extractCharacterId(urlOrId: string | number): number | null {
   if (typeof urlOrId === 'number') return urlOrId;
-  const match = String(urlOrId).match(/\/characters\/(\d+)/);
+  const str = String(urlOrId).trim();
+  const match = str.match(/\/characters\/(\d+)/);
   if (match) return parseInt(match[1], 10);
-  const numericOnly = String(urlOrId).replace(/[^\d]/g, '');
-  if (numericOnly) return parseInt(numericOnly, 10);
-  throw new Error(`Could not parse D&D Beyond character ID from: "${urlOrId}"`);
+  if (/^\d+$/.test(str)) return parseInt(str, 10);
+  return null;
 }
 
 export async function fetchCharacterById(
@@ -37,6 +37,9 @@ export async function fetchCharacterById(
   options: FetchCharacterOptions = {}
 ): Promise<CharacterData> {
   const id = extractCharacterId(characterId);
+  if (!id) {
+    throw new Error(`Could not parse D&D Beyond character ID from: "${characterId}"`);
+  }
   const customItems = options.includeCustomItems !== false;
   const url = `https://character-service.dndbeyond.com/character/v5/character/${id}?includeCustomItems=${customItems}`;
 
