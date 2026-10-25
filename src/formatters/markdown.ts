@@ -1,5 +1,5 @@
 import { cleanDdbImageUrl } from '../utils/image';
-import { CharacterData, MonsterData, ItemData } from '../types';
+import { CharacterData, MonsterData, ItemData, SpellData, SourceChapterData } from '../types';
 
 export function escapeYamlString(str?: string | number | null): string {
   if (str === undefined || str === null) return '""';
@@ -18,7 +18,7 @@ export function toYamlArray(items: Array<string | number>, indent = 2): string {
 }
 
 /**
- * Formats a CharacterData object into Foundry-compatible Markdown with YAML frontmatter
+ * Formats a CharacterData object into Markdown with YAML frontmatter
  */
 export function characterToMarkdown(c: CharacterData): string {
   const cleanAvatarUrl = cleanDdbImageUrl(c.avatarUrl);
@@ -214,7 +214,7 @@ ${skillsOutput.join('\n')}
 }
 
 /**
- * Formats a MonsterData object into Foundry-compatible Markdown with YAML frontmatter
+ * Formats a MonsterData object into Markdown with YAML frontmatter
  */
 export function monsterToMarkdown(m: MonsterData): string {
   const cleanImgUrl = cleanDdbImageUrl(m.imageUrl);
@@ -353,4 +353,103 @@ ${item.description}
   }
 
   return `${frontmatter}\n${body}`.trim() + '\n';
+}
+
+/**
+ * Formats a SpellData object into Markdown with YAML frontmatter
+ */
+export function spellToMarkdown(spell: SpellData): string {
+  const cleanImgUrl = cleanDdbImageUrl(spell.image);
+  const imgMarkdown = cleanImgUrl ? `![${spell.name}](${cleanImgUrl})\n\n` : "";
+
+  const frontmatter = `---
+name: ${escapeYamlString(spell.name)}
+type: "spell"
+level: ${spell.level}
+school: ${escapeYamlString(spell.school)}
+casting_time: ${escapeYamlString(spell.castingTime)}
+range: ${escapeYamlString(spell.range)}
+components: ${escapeYamlString(spell.components)}
+material: ${escapeYamlString(spell.material)}
+duration: ${escapeYamlString(spell.duration)}
+concentration: ${Boolean(spell.concentration)}
+ritual: ${Boolean(spell.ritual)}
+attack_save: ${escapeYamlString(spell.attackSave)}
+damage_effect: ${escapeYamlString(spell.damageEffect)}
+classes: ${toYamlArray(spell.classes || [], 2)}
+tags: ${toYamlArray(spell.tags || [], 2)}
+source: ${escapeYamlString(spell.source)}
+image: ${escapeYamlString(cleanImgUrl)}
+---`;
+
+  let levelSchool = "";
+  if (spell.level === 0) {
+    levelSchool = `${spell.school} Cantrip`;
+  } else {
+    const ordinal =
+      spell.level === 1 ? "1st" :
+      spell.level === 2 ? "2nd" :
+      spell.level === 3 ? "3rd" : `${spell.level}th`;
+    levelSchool = `${ordinal}-Level ${spell.school}`;
+  }
+  if (spell.ritual) {
+    levelSchool += " (Ritual)";
+  }
+
+  let body = `
+# ${spell.name}
+${imgMarkdown}*${levelSchool}*
+
+- **Casting Time:** ${spell.castingTime}
+- **Range/Area:** ${spell.range}
+- **Components:** ${spell.components}${spell.material ? ` *(${spell.material})*` : ""}
+- **Duration:** ${spell.duration}
+- **School:** ${spell.school}
+`;
+
+  if (spell.attackSave) {
+    body += `- **Attack/Save:** ${spell.attackSave}\n`;
+  }
+  if (spell.damageEffect) {
+    body += `- **Damage/Effect:** ${spell.damageEffect}\n`;
+  }
+
+  body += `\n${spell.description}\n`;
+
+  const metaItems: string[] = [];
+  if (spell.classes && spell.classes.length) {
+    metaItems.push(`- **Classes:** ${spell.classes.join(", ")}`);
+  }
+  if (spell.tags && spell.tags.length) {
+    metaItems.push(`- **Tags:** ${spell.tags.join(", ")}`);
+  }
+  if (spell.source) {
+    metaItems.push(`- **Source:** ${spell.source}`);
+  }
+
+  if (metaItems.length > 0) {
+    body += `\n---\n${metaItems.join("\n")}\n`;
+  }
+
+  return `${frontmatter}\n${body}`.trim() + "\n";
+}
+
+/**
+ * Formats a SourceChapterData object into Markdown with YAML frontmatter
+ */
+export function sourceToMarkdown(chapter: SourceChapterData): string {
+  const frontmatter = `---
+name: ${escapeYamlString(chapter.title)}
+type: "source"
+book: ${escapeYamlString(chapter.bookTitle || "")}
+url: ${escapeYamlString(chapter.url || "")}
+---`;
+
+  let body = `# ${chapter.title}\n`;
+  if (chapter.bookTitle) {
+    body += `*${chapter.bookTitle}*\n\n`;
+  }
+  body += `${chapter.content}\n`;
+
+  return `${frontmatter}\n\n${body}`.trim() + "\n";
 }

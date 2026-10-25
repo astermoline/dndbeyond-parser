@@ -57,15 +57,22 @@ export interface InventoryItemData extends ItemData {
 }
 
 export interface SpellData {
+  id?: string | number;
   name: string;
   level: number;
   school: string;
   castingTime: string;
   range: string;
   components: string;
+  material?: string;
   duration: string;
   description: string;
-  source?: 'class' | 'subclass' | 'race' | 'feat' | 'item' | 'other';
+  attackSave?: string;
+  damageEffect?: string;
+  source?: string;
+  classes?: string[];
+  tags?: string[];
+  image?: string;
   prepared?: boolean;
   alwaysPrepared?: boolean;
   concentration?: boolean;
@@ -182,4 +189,11 @@ export interface MonsterData {
   lairActions: ActionItemData[];
   description?: string;
   environments?: string[];
+}
+
+export interface SourceChapterData {
+  title: string;
+  bookTitle?: string;
+  url?: string;
+  content: string;
 }

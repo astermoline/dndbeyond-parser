@@ -10,6 +10,12 @@ import {
   characterToMarkdown,
   monsterToMarkdown,
   itemToMarkdown,
+  parseSpellTooltipJson,
+  parseSpellDom,
+  spellToMarkdown,
+  parseSourceDom,
+  sourceToMarkdown,
+  extractSpellId,
 } from '../src';
 
 const fixturesDir = path.resolve(__dirname, 'fixtures');
@@ -50,7 +56,7 @@ describe('Character Parser', () => {
     }
   });
 
-  it('generates valid Foundry-compatible markdown with YAML frontmatter', () => {
+  it('generates valid markdown with YAML frontmatter', () => {
     const char = parseCharacterJson(rizJson);
     const md = characterToMarkdown(char);
 
@@ -186,5 +192,207 @@ describe('Item Parser', () => {
     expect(item.requiresAttunement).toBe(true);
     expect(item.image).toBe('https://www.dndbeyond.com/avatars/thumbnails/55227/411/1000/1000/639081773424222752.png');
     expect(item.description).toContain('This staff has 50 charges');
+  });
+});
+
+
+describe('Spell Parser', () => {
+  const fireballTooltip = {
+    Type: "spell",
+    Id: 2618887,
+    Tooltip: `<div class="tooltip tooltip-spell">
+    <div class="tooltip-header">
+        <div class="tooltip-header-text">
+            <div class="tooltip-header-title">Fireball </div>
+            <div class="tooltip-header-subtitle">Player’s Handbook</div>
+        </div>
+    </div>
+    <div class="tooltip-body">
+        <div class="tooltip-body-statblock">
+            <div class="tooltip-body-statblock-item tooltip-body-statblock-item-level">
+                <div class="tooltip-body-statblock-item-value">3rd</div>
+            </div>
+            <div class="tooltip-body-statblock-item tooltip-body-statblock-item-castingtime">
+                <div class="tooltip-body-statblock-item-value">1 Action </div>
+            </div>
+            <div class="tooltip-body-statblock-item tooltip-body-statblock-item-range">
+                <div class="tooltip-body-statblock-item-value">150 ft. (20 ft.)</div>
+            </div>
+            <div class="tooltip-body-statblock-item tooltip-body-statblock-item-components">
+                <div class="tooltip-body-statblock-item-value">V, S, M</div>
+            </div>
+            <div class="tooltip-body-statblock-item tooltip-body-statblock-item-duration">
+                <div class="tooltip-body-statblock-item-value">Instantaneous</div>
+            </div>
+            <div class="tooltip-body-statblock-item tooltip-body-statblock-item-school">
+                <div class="tooltip-body-statblock-item-value">Evocation</div>
+            </div>
+            <div class="tooltip-body-statblock-item tooltip-body-statblock-item-save">
+                <div class="tooltip-body-statblock-item-value">DEX Save</div>
+            </div>
+            <div class="tooltip-body-statblock-item tooltip-body-statblock-item-damage">
+                <div class="tooltip-body-statblock-item-value"><span class="damage-effect-text">Fire</span></div>
+            </div>
+        </div>
+        <div class="tooltip-body-description">
+            <div class="tooltip-body-description-text">
+                <p>A bright streak flashes from you to a point you choose...</p>
+            </div>
+        </div>
+    </div>
+</div>`
+  };
+
+  it('extracts spell ID from URL or numeric ID', () => {
+    expect(extractSpellId("https://www.dndbeyond.com/spells/2618887-fireball")).toBe(2618887);
+    expect(extractSpellId("2618887")).toBe(2618887);
+    expect(extractSpellId("https://www.dndbeyond.com/spells")).toBe(null);
+  });
+
+  it('parses spell tooltip json accurately', () => {
+    const spell = parseSpellTooltipJson(fireballTooltip);
+    expect(spell.name).toBe("Fireball");
+    expect(spell.level).toBe(3);
+    expect(spell.school).toBe("Evocation");
+    expect(spell.castingTime).toBe("1 Action");
+    expect(spell.range).toBe("150 ft. (20 ft.)");
+    expect(spell.components).toBe("V, S, M");
+    expect(spell.duration).toBe("Instantaneous");
+    expect(spell.attackSave).toBe("DEX Save");
+    expect(spell.damageEffect).toBe("Fire");
+    expect(spell.source).toBe("Player’s Handbook");
+    expect(spell.description).toContain("A bright streak flashes");
+  });
+
+  it('parses spell DOM details with material components and classes', () => {
+    const mockRoot = {
+      querySelector: (selector: string) => {
+        if (selector.includes("page-title")) return { textContent: "Fireball" };
+        if (selector.includes("ddb-statblock-item-level")) return { textContent: "3rd" };
+        if (selector.includes("ddb-statblock-item-casting-time")) return { textContent: "1 Action" };
+        if (selector.includes("ddb-statblock-item-range-area")) return { textContent: "150 ft. (20 ft.)" };
+        if (selector.includes("ddb-statblock-item-components")) return { textContent: "V, S, M *" };
+        if (selector.includes("ddb-statblock-item-duration")) return { textContent: "Instantaneous" };
+        if (selector.includes("ddb-statblock-item-school")) return { textContent: "Evocation" };
+        if (selector.includes("ddb-statblock-item-attack-save")) return { textContent: "DEX Save" };
+        if (selector.includes("ddb-statblock-item-damage-effect")) return { textContent: "Fire" };
+        if (selector.includes("spell-source")) return { textContent: "Player’s Handbook, pg. 274" };
+        if (selector.includes("more-info-content")) {
+          return {
+            innerHTML: "<p>A bright streak flashes...</p>",
+            querySelector: (s: string) => s.includes("components-blurb") ? { textContent: "* - (a ball of bat guano and sulfur)" } : null,
+            cloneNode: () => ({
+              querySelector: () => ({ remove: () => {} }),
+              innerHTML: "<p>A bright streak flashes...</p>",
+            }),
+          };
+        }
+        return null;
+      },
+      querySelectorAll: (selector: string) => {
+        if (selector.includes("spell-tag")) return [{ textContent: "Damage" }];
+        if (selector.includes("class-tag")) return [{ textContent: "Sorcerer" }, { textContent: "Wizard" }];
+        return [];
+      },
+    } as any;
+
+    const spell = parseSpellDom(mockRoot);
+    expect(spell.name).toBe("Fireball");
+    expect(spell.level).toBe(3);
+    expect(spell.material).toBe("(a ball of bat guano and sulfur)");
+    expect(spell.classes).toEqual(["Sorcerer", "Wizard"]);
+    expect(spell.tags).toEqual(["Damage"]);
+    expect(spell.source).toBe("Player’s Handbook, pg. 274");
+  });
+
+  it('generates valid spell markdown with YAML frontmatter', () => {
+    const spell = parseSpellTooltipJson(fireballTooltip);
+    spell.classes = ["Sorcerer", "Wizard"];
+    spell.tags = ["Damage"];
+    const md = spellToMarkdown(spell);
+
+    expect(md).toMatch(/^---\nname: "Fireball"/);
+    expect(md).toContain('type: "spell"');
+    expect(md).toContain("level: 3");
+    expect(md).toContain('school: "Evocation"');
+    expect(md).toContain('- "Sorcerer"');
+    expect(md).toContain("# Fireball");
+    expect(md).toContain("*3rd-Level Evocation*");
+    expect(md).toContain("- **Casting Time:** 1 Action");
+    expect(md).toContain("- **Attack/Save:** DEX Save");
+    expect(md).toContain("- **Classes:** Sorcerer, Wizard");
+  });
+
+  it('formats Cantrips appropriately in markdown', () => {
+    const cantrip = {
+      name: "Acid Splash",
+      level: 0,
+      school: "Evocation",
+      castingTime: "1 Action",
+      range: "60 ft. (5 ft.)",
+      components: "V, S",
+      duration: "Instantaneous",
+      description: "You create an acidic bubble...",
+      attackSave: "DEX Save",
+      damageEffect: "Acid",
+    };
+    const md = spellToMarkdown(cantrip);
+    expect(md).toContain("*Evocation Cantrip*");
+    expect(md).toContain("level: 0");
+  });
+});
+
+
+describe('Source Chapter Parser', () => {
+  it('parses source chapter DOM accurately', () => {
+    const mockDoc = {
+      querySelector: (selector: string) => {
+        if (selector.includes("page-title")) return { textContent: "Character Origins" };
+        if (selector.includes("p-article-content")) {
+          return {
+            innerHTML: "<p>This chapter describes background and species.</p><h2>Origin Components</h2><p>Facets of your character.</p>",
+            cloneNode: () => ({
+              querySelectorAll: () => [],
+              innerHTML: "<p>This chapter describes background and species.</p><h2>Origin Components</h2><p>Facets of your character.</p>",
+            }),
+          };
+        }
+        return null;
+      },
+      querySelectorAll: (selector: string) => {
+        if (selector.includes("breadcrumb")) {
+          return [
+            { textContent: "Home" },
+            { textContent: "Sources" },
+            { textContent: "D&D Beyond Basic Rules" },
+            { textContent: "Character Origins" },
+          ];
+        }
+        return [];
+      },
+    } as any;
+
+    const source = parseSourceDom(mockDoc, "https://www.dndbeyond.com/sources/dnd/br-2024/character-origins");
+    expect(source.title).toBe("Character Origins");
+    expect(source.bookTitle).toBe("D&D Beyond Basic Rules");
+    expect(source.url).toBe("https://www.dndbeyond.com/sources/dnd/br-2024/character-origins");
+    expect(source.content).toContain("This chapter describes background and species.");
+  });
+
+  it('generates clean markdown with YAML frontmatter for source chapters', () => {
+    const chapter = {
+      title: "Character Origins",
+      bookTitle: "D&D Beyond Basic Rules",
+      url: "https://www.dndbeyond.com/sources/dnd/br-2024/character-origins",
+      content: "## Origin Components\n\nEach part of your character’s origin reflects facets of your character.",
+    };
+
+    const md = sourceToMarkdown(chapter);
+    expect(md).toMatch(/^---\nname: "Character Origins"/);
+    expect(md).toContain('type: "source"');
+    expect(md).toContain('book: "D&D Beyond Basic Rules"');
+    expect(md).toContain("# Character Origins");
+    expect(md).toContain("*D&D Beyond Basic Rules*");
+    expect(md).toContain("## Origin Components");
   });
 });

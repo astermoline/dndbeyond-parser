@@ -4,7 +4,7 @@
 export function cleanDdbHtml(html: string): string {
   if (!html) return '';
   return html
-    .replace(/<a[^>]*class="[^"]*(?:tooltip-hover|spell-tooltip|monster-tooltip|item-tooltip|rule-tooltip|action-tooltip|sense-tooltip|skill-tooltip)[^"]*"[^>]*>([\s\S]*?)<\/a>/gi, '$1')
+    .replace(/<a[^>]*class="[^"]*(?:tooltip-hover|spell-tooltip|monster-tooltip|item-tooltip|rule-tooltip|action-tooltip|sense-tooltip|skill-tooltip|condition-tooltip|vehicle-tooltip)[^"]*"[^>]*>([\s\S]*?)<\/a>/gi, '$1')
     .replace(/<span[^>]*class="[^"]*(?:tooltip-hover)[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1')
     .replace(/<span[^>]*data-dicenotation="[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1');
 }
@@ -79,11 +79,20 @@ function parseNode(node: Node, listDepth = 0, isNumberedList = false, listIndex 
       return `\n\`\`\`\n${childrenContent}\n\`\`\`\n`;
     case 'A': {
       const href = el.getAttribute('href') || '';
-      if (!href || (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#'))) {
+      if (!childrenContent.trim()) return '';
+      if (!href || (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#') && !href.startsWith('/'))) {
         return childrenContent;
       }
-      return childrenContent.trim() ? `[${childrenContent.trim()}](${href})` : childrenContent;
+      return `[${childrenContent.trim()}](${href})`;
     }
+    case 'IMG': {
+      const src = el.getAttribute('src') || '';
+      const alt = el.getAttribute('alt') || '';
+      if (!src) return '';
+      return `\n\n![${alt.trim()}](${src})\n\n`;
+    }
+    case 'HR':
+      return `\n\n---\n\n`;
     case 'H1': return `\n# ${childrenContent.trim()}\n\n`;
     case 'H2': return `\n## ${childrenContent.trim()}\n\n`;
     case 'H3': return `\n### ${childrenContent.trim()}\n\n`;
@@ -151,12 +160,17 @@ export function regexHtmlToMarkdown(html: string): string {
   if (!html) return '';
   return html
     .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<hr\s*\/?>/gi, '\n\n---\n\n')
+    .replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '\n\n![$2]($1)\n\n')
+    .replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '\n\n![$1]($2)\n\n')
+    .replace(/<a[^>]*class="[^"]*heading-anchor[^"]*"[^>]*>[\s\S]*?<\/a>/gi, '')
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>\s*<\/a>/gi, '')
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (m, href, text) => text.trim() ? `[${text.trim()}](${href})` : '')
     .replace(/<\/(p|div|h[1-6]|tr|li|blockquote)>/gi, '\n\n')
     .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**')
     .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, '**$1**')
     .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*')
     .replace(/<i[^>]*>([\s\S]*?)<\/i>/gi, '*$1*')
-    .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')

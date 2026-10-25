@@ -21,11 +21,58 @@ import { htmlToMarkdown } from '../utils/html';
 export interface FetchCharacterOptions {
   includeCustomItems?: boolean;
   cobaltSession?: string;
+  authToken?: string;
   fetchFn?: typeof fetch;
 }
 
+let cachedCobaltToken: { token: string; expiresAt: number } | null = null;
+
+export async function getCobaltAuthToken(options: FetchCharacterOptions = {}): Promise<string | null> {
+  if (options.authToken) {
+    return options.authToken;
+  }
+
+  if (cachedCobaltToken && cachedCobaltToken.expiresAt > Date.now()) {
+    return cachedCobaltToken.token;
+  }
+
+  try {
+    const fetcher = resolveFetch(options.fetchFn);
+    const authHeaders: Record<string, string> = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    };
+
+    if (options.cobaltSession) {
+      authHeaders["Cookie"] = `CobaltSession=${options.cobaltSession}`;
+    }
+
+    const authRes = await fetcher.call(globalThis, "https://auth-service.dndbeyond.com/v1/cobalt-token", {
+      method: "POST",
+      headers: authHeaders,
+      credentials: "include",
+    });
+
+    if (authRes.ok) {
+      const data = await authRes.json();
+      if (data && data.token) {
+        const ttl = typeof data.ttl === "number" ? data.ttl : 300;
+        cachedCobaltToken = {
+          token: data.token,
+          expiresAt: Date.now() + Math.max(10, ttl - 30) * 1000,
+        };
+        return data.token;
+      }
+    }
+  } catch {
+    // Ignore and fallback
+  }
+
+  return null;
+}
+
 export function extractCharacterId(urlOrId: string | number): number | null {
-  if (typeof urlOrId === 'number') return urlOrId;
+  if (typeof urlOrId === "number") return urlOrId;
   const str = String(urlOrId).trim();
   const match = str.match(/\/characters\/(\d+)/);
   if (match) return parseInt(match[1], 10);
@@ -44,23 +91,41 @@ export async function fetchCharacterById(
   const customItems = options.includeCustomItems !== false;
   const url = `https://character-service.dndbeyond.com/character/v5/character/${id}?includeCustomItems=${customItems}`;
 
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-  };
-
-  if (options.cobaltSession) {
-    headers['Cookie'] = `CobaltSession=${options.cobaltSession}`;
-  }
-
   const fetcher = resolveFetch(options.fetchFn);
 
-  const response = await fetcher.call(globalThis, url, {
-    headers,
-    credentials: 'include',
-  });
+  const doFetch = async (authToken?: string | null) => {
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+
+    if (authToken) {
+      headers["Authorization"] = authToken.startsWith("Bearer ") ? authToken : `Bearer ${authToken}`;
+    }
+
+    if (options.cobaltSession) {
+      headers["Cookie"] = `CobaltSession=${options.cobaltSession}`;
+    }
+
+    return fetcher.call(globalThis, url, {
+      headers,
+      credentials: "include",
+    });
+  };
+
+  let token = await getCobaltAuthToken(options);
+  let response = await doFetch(token);
+
+  // If 401/403 and we had a cached token, retry once with refreshed token
+  if ((response.status === 401 || response.status === 403) && cachedCobaltToken) {
+    cachedCobaltToken = null;
+    token = await getCobaltAuthToken(options);
+    if (token) {
+      response = await doFetch(token);
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} loading character ${id}: ${await response.text().catch(() => '')}`);
+    throw new Error(`HTTP ${response.status} loading character ${id}: ${await response.text().catch(() => "")}`);
   }
 
   const json = await response.json();
