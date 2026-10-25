@@ -5,6 +5,7 @@ import {
   parseCharacterJson,
   parseMonsterJson,
   parseItemTooltipJson,
+  parseItemDom,
   characterToMarkdown,
   monsterToMarkdown,
   itemToMarkdown,
@@ -132,5 +133,47 @@ describe('Item Parser', () => {
     expect(md).toContain('type: "item"');
     expect(md).toContain('attunement: true');
     expect(md).toContain('# Cloak of Protection');
+  });
+  it('parses item details and extracts high-resolution lightbox image', () => {
+    const mockRoot = {
+      querySelector: (selector: string) => {
+        if (selector.includes('page-title')) {
+          return { textContent: 'Staff of the Magi' };
+        }
+        if (selector.includes('data-lightbox')) {
+          return {
+            getAttribute: (attr: string) =>
+              attr === 'href'
+                ? 'https://www.dndbeyond.com/avatars/thumbnails/55227/411/1000/1000/639081773424222752.png'
+                : null,
+          };
+        }
+        if (selector.includes('magic-item-image')) {
+          return {
+            src: 'https://www.dndbeyond.com/avatars/thumbnails/55227/411/1000/1000/639081773424222752.png',
+            getAttribute: () => 'https://www.dndbeyond.com/avatars/thumbnails/55227/411/1000/1000/639081773424222752.png',
+          };
+        }
+        if (selector.includes('details')) {
+          return { textContent: 'Staff, legendary (requires attunement by a Sorcerer, Warlock, or Wizard)' };
+        }
+        if (selector.includes('more-info-content')) {
+          return {
+            innerHTML: '<p>This staff has 50 charges...</p>',
+            querySelector: () => null,
+          };
+        }
+        return null;
+      },
+      querySelectorAll: () => [],
+    } as any;
+
+    const item = parseItemDom(mockRoot);
+    expect(item.name).toBe('Staff of the Magi');
+    expect(item.type).toBe('Staff');
+    expect(item.rarity).toBe('legendary');
+    expect(item.requiresAttunement).toBe(true);
+    expect(item.image).toBe('https://www.dndbeyond.com/avatars/thumbnails/55227/411/1000/1000/639081773424222752.png');
+    expect(item.description).toContain('This staff has 50 charges');
   });
 });
