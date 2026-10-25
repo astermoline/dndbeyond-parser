@@ -35,7 +35,19 @@
     "foundry-vtt",
     "character-sheet"
   ],
-  "author": "astermoe",
+  "author": {
+    "name": "Aster Moline",
+    "email": "aster@moline.dev",
+    "url": "https://aster.quest"
+  },
+  "homepage": "https://aster.quest",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/astermoline/dndbeyond-parser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/astermoline/dndbeyond-parser/issues"
+  },
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.4.5",

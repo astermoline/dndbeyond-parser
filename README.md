@@ -123,4 +123,4 @@ While this is an independent clean-room implementation, it was deeply inspired b
 
 ## License
 
-MIT © [astermoe](https://github.com/astermoe)
+MIT © [Aster Moline](https://aster.quest) ([@astermoline](https://github.com/astermoline))
