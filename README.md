@@ -1,17 +1,19 @@
 # @astermoe/dndbeyond-parser
 
-Universal, zero-runtime-dependency TypeScript library for extracting and parsing D&D Beyond player characters, monsters/NPCs, and magic items into normalized, strongly-typed data structures. It also includes built-in formatters to export these entities into Markdown with YAML frontmatter—specifically tailored for the [`foundry-markdown-sheets`](https://github.com/nickmoline/foundry-markdown-sheets) Foundry VTT module and note-taking tools like Obsidian.
+Universal, zero-runtime-dependency TypeScript library for extracting and parsing D&D Beyond player characters, monsters/NPCs, and magic items into normalized, strongly-typed data structures, with built-in formatters to export them into clean Markdown with YAML frontmatter.
 
 Designed to run seamlessly in both modern browser contexts (Chrome Extensions, WebExtensions) and Node.js environments (18+).
 
 ---
 
-## Why This Exists
+## What It Is & Why It Exists
 
-D&D Beyond is one of the most widely used platforms for managing D&D 5e characters, monsters, and items, but extracting its data in a clean, reusable format can be challenging:
-1. **Normalized Data Models**: Provides structured TypeScript interfaces (`CharacterData`, `MonsterData`, `ItemData`) that resolve character stats, modifiers, equipped items, AC formulas, spell lists across multiple sources (class, subclass, feats, species, items), and monster actions into predictable objects.
-2. **Markdown with YAML Frontmatter**: Foundry VTT does not natively support Markdown for character sheets or journal entries. The [`foundry-markdown-sheets`](https://github.com/nickmoline/foundry-markdown-sheets) module was built to enable Markdown-powered sheets inside Foundry. This library generates Markdown files with YAML frontmatter formatted specifically to be consumed by that module, as well as personal knowledge management tools like Obsidian.
-3. **Cross-Platform Reusability**: Designed so that multiple tools—such as the `dndbeyond-markdown-sheets` Chrome extension and the `dndbeyond-archivist-sync` extension—can share the exact same battle-tested parsing and extraction logic.
+If you manage tabletop campaigns across multiple tools—like D&D Beyond, Foundry VTT, Obsidian, NotebookLM, or Archivist.AI—getting consistent, structured data out of D&D Beyond can be frustrating.
+
+This library solves that by providing:
+1. **Normalized Data Models (`CharacterData`, `MonsterData`, `ItemData`)**: Resolves complex D&D Beyond character rules (ability modifiers, proficiencies, armor class formulas, multiclassing, feats, species traits, equipped inventory, and multi-source spell lists) and monster stat blocks into clean, typed TypeScript interfaces.
+2. **Unified Markdown Output**: Matches the Markdown and YAML frontmatter schema established by the [foundry-markdown-sheets](https://github.com/nickmoline/foundry-markdown-sheets) Foundry VTT exporter module. Whether you export an actor sheet from Foundry VTT or a character from D&D Beyond, the resulting Markdown files share the exact same consistent structure and YAML frontmatter for your Obsidian vaults, NotebookLM, or Archivist.AI campaigns.
+3. **Shared Core for Extensions**: Serves as the single parsing and formatting engine shared between the [dndbeyond-markdown-sheets](https://github.com/astermoline/dndbeyond-markdown-sheets) export extension and the [dndbeyond-archivist-sync](https://github.com/astermoline/dndbeyond-archivist-sync) extension.
 
 ---
 
@@ -36,9 +38,9 @@ D&D Beyond is one of the most widely used platforms for managing D&D 5e characte
   - Parsing from item detail pages, tooltip JSON endpoints (`/tooltip-json`), and embedded character inventory items.
   - Rarity, item types, attunement requirements, weights, costs, tags, notes, and sources.
 
-- **Markdown Exporter (`foundry-markdown-sheets` & Obsidian)**:
-  - Generates Markdown files with structured YAML frontmatter matching the schema defined by the [`foundry-markdown-sheets`](https://github.com/nickmoline/foundry-markdown-sheets) Foundry VTT module.
-  - Cleanly renders in Obsidian and other markdown-based campaign managers.
+- **Markdown Exporter (`foundry-markdown-sheets` & Obsidian format)**:
+  - Generates Markdown files with structured YAML frontmatter matching the schema defined by the [`foundry-markdown-sheets`](https://github.com/nickmoline/foundry-markdown-sheets) Foundry VTT export module.
+  - Tailored for seamless use in Obsidian, NotebookLM, and Archivist.AI.
 
 ---
 
@@ -63,7 +65,7 @@ const character = await fetchCharacterById(131447412);
 console.log(`${character.name} - Level ${character.totalLevel} ${character.species} ${character.classLine}`);
 console.log(`HP: ${character.hp.value}/${character.hp.max} | AC: ${character.ac.value}`);
 
-// Convert to Markdown formatted for foundry-markdown-sheets / Obsidian
+// Convert to Markdown matching the foundry-markdown-sheets format
 const markdown = characterToMarkdown(character);
 console.log(markdown);
 ```
@@ -79,7 +81,7 @@ const goblin = await fetchMonsterById(16907);
 console.log(`${goblin.name} (CR ${goblin.cr}, ${goblin.xp} XP)`);
 console.log(`HP: ${goblin.hp.value} (${goblin.hp.formula}) | AC: ${goblin.ac.value}`);
 
-// Convert to Markdown formatted for foundry-markdown-sheets / Obsidian
+// Convert to Markdown
 const markdown = monsterToMarkdown(goblin);
 ```
 
@@ -112,10 +114,10 @@ See `src/types/index.ts` for full TypeScript definitions.
 
 ## Acknowledgments & Inspiration
 
-While this is an independent clean-room implementation, it was deeply inspired by and owes gratitude to several pioneering projects in the D&D Beyond and virtual tabletop (VTT) community:
+While this is an independent clean-room implementation, it was deeply inspired by and owes gratitude to several pioneering projects in the D&D Beyond and tabletop community:
 
-- **[foundry-markdown-sheets](https://github.com/nickmoline/foundry-markdown-sheets)**: The Foundry VTT module that enables Foundry to read and render Markdown sheets with YAML frontmatter. This library's Markdown formatting and frontmatter structure were created specifically to output files ready for use with this module.
-- **[dndbeyond-mcp](https://github.com/grahamethompson/dndbeyond-mcp)** by [Grahame Thompson](https://github.com/grahamethompson): An MCP (Model Context Protocol) server for D&D Beyond that provided invaluable reference for D&D Beyond's internal endpoints, particularly the monster service API and character query parameters (`includeCustomItems=true`).
+- **[foundry-markdown-sheets](https://github.com/nickmoline/foundry-markdown-sheets)**: The Foundry VTT module that exports Foundry character and NPC sheets to Markdown. This library's Markdown formatting and YAML frontmatter schema were designed to match its output, providing a consistent Markdown schema across both platforms.
+- **[dndbeyond-mcp](https://github.com/grahamethompson/dndbeyond-mcp)** by [Grahame Thompson](https://github.com/grahamethompson): An MCP (Model Context Protocol) server for D&D Beyond that provided invaluable reference for D&D Beyond's internal endpoints, particularly the monster service API (`https://monster-service.dndbeyond.com/v1/Monster/{id}`) and character query parameters (`includeCustomItems=true`).
 - **[Beyond20](https://github.com/kakaroto/Beyond20)** by [KaKaRoTo](https://github.com/kakaroto): The gold standard browser extension for integrating D&D Beyond with VTTs like Roll20 and Foundry VTT. Beyond20 provided fantastic inspiration for navigating D&D Beyond's dynamic DOM structures and character sheet layouts.
 - **[ddb-importer](https://github.com/MrPrimate/ddb-importer)** and **[ddb-importer-chrome](https://github.com/mrprimate/ddb-importer-chrome)** by [MrPrimate](https://github.com/MrPrimate): Landmark open-source tools for importing D&D Beyond content into Foundry VTT, establishing the patterns for working with Cobalt session cookies to authenticate against D&D Beyond endpoints.
 
