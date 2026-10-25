@@ -1,0 +1,135 @@
+{
+  "collectionUserId": 0,
+  "isReleased": true,
+  "url": "https://www.dndbeyond.com/monsters/16907-goblin",
+  "conditionImmunitiesHtml": "",
+  "sensesHtml": "<a class=\"tooltip-hover sense-tooltip\" href=\"/sources/dnd/free-rules/rules-glossary#Darkvision\" aria-haspopup=\"true\" data-tooltip-href=\"/senses/2-tooltip\" data-tooltip-json-href=\"/senses/2/tooltip-json\">Darkvision</a> 60 ft.",
+  "skillsHtml": "<a class=\"tooltip-hover skill-tooltip\" href=\"/sources/dnd/free-rules/playing-the-game#Skills\" aria-haspopup=\"true\" data-tooltip-href=\"/skills/5-tooltip\" data-tooltip-json-href=\"/skills/5/tooltip-json\">Stealth</a> <span data-dicenotation=\"1d20+6\" data-rolltype=\"check\" data-rollaction=\"Stealth\">+6</span>",
+  "stats": [
+    {
+      "statId": 1,
+      "name": null,
+      "value": 8
+    },
+    {
+      "statId": 2,
+      "name": null,
+      "value": 14
+    },
+    {
+      "statId": 3,
+      "name": null,
+      "value": 10
+    },
+    {
+      "statId": 4,
+      "name": null,
+      "value": 10
+    },
+    {
+      "statId": 5,
+      "name": null,
+      "value": 8
+    },
+    {
+      "statId": 6,
+      "name": null,
+      "value": 8
+    }
+  ],
+  "senses": [
+    {
+      "senseId": 2,
+      "notes": "60 ft."
+    }
+  ],
+  "savingThrows": [],
+  "skills": [
+    {
+      "skillId": 5,
+      "value": 4,
+      "additionalBonus": null
+    }
+  ],
+  "languages": [
+    {
+      "languageId": 1,
+      "notes": ""
+    },
+    {
+      "languageId": 6,
+      "notes": ""
+    }
+  ],
+  "hitPointDice": {
+    "diceCount": 2,
+    "diceValue": 6,
+    "diceMultiplier": 0,
+    "fixedValue": 0,
+    "diceString": "2d6"
+  },
+  "swarm": null,
+  "movements": [
+    {
+      "movementId": 1,
+      "speed": 30,
+      "notes": null
+    }
+  ],
+  "homebrewStatus": 0,
+  "initiativeBonus": null,
+  "id": 16907,
+  "entityTypeId": 779871897,
+  "name": "Goblin",
+  "alignmentId": 8,
+  "sizeId": 3,
+  "typeId": 11,
+  "armorClass": 15,
+  "armorClassDescription": "(leather armor, shield)  ",
+  "averageHitPoints": 7,
+  "passivePerception": 9,
+  "isHomebrew": false,
+  "challengeRatingId": 3,
+  "sourceId": 1,
+  "sourcePageNumber": 138,
+  "isLegendary": false,
+  "isMythic": false,
+  "hasLair": false,
+  "avatarUrl": "https://www.dndbeyond.com/avatars/0/350/636252777818027282.jpeg",
+  "largeAvatarUrl": "https://www.dndbeyond.com/avatars/30783/955/638062024584880857.png",
+  "basicAvatarUrl": "https://www.dndbeyond.com.com/avatars/30783/956/638062024586710864.png",
+  "version": null,
+  "subTypes": [
+    23
+  ],
+  "environments": [
+    4,
+    5,
+    6,
+    9
+  ],
+  "tags": [
+    "Goblinoid"
+  ],
+  "sources": [
+    {
+      "sourceId": 1,
+      "pageNumber": 138,
+      "sourceType": 1
+    }
+  ],
+  "damageAdjustments": [],
+  "conditionImmunities": [],
+  "specialTraitsDescription": "<p><em><strong>Nimble Escape.</strong></em> The goblin can take the <a class=\"tooltip-hover action-tooltip\" href=\"/sources/dnd/free-rules/rules-glossary#DisengageAction\" aria-haspopup=\"true\" data-tooltip-href=\"/actions/5-tooltip\" data-tooltip-json-href=\"/actions/5/tooltip-json\">Disengage</a> or <a class=\"tooltip-hover action-tooltip\" href=\"/sources/dnd/free-rules/rules-glossary#HideAction\" aria-haspopup=\"true\" data-tooltip-href=\"/actions/8-tooltip\" data-tooltip-json-href=\"/actions/8/tooltip-json\">Hide</a> action as a bonus action on each of its turns.</p>",
+  "actionsDescription": "<p><em><strong>Scimitar.</strong> Melee Weapon Attack:</em> <span data-dicenotation=\"1d20+4\" data-rolltype=\"to hit\" data-rollaction=\"Scimitar\">+4</span> to hit, reach 5 ft., one target. <em>Hit:</em> 5 <span data-dicenotation=\"1d6+2\" data-rolltype=\"damage\" data-rollaction=\"Scimitar\" data-rolldamagetype=\"slashing\">(1d6 + 2)</span> slashing damage.</p>\n<p><em><strong>Shortbow.</strong> Ranged Weapon Attack:</em> <span data-dicenotation=\"1d20+4\" data-rolltype=\"to hit\" data-rollaction=\"Shortbow\">+4</span> to hit, range 80/320 ft., one target. <em>Hit:</em> 5 <span data-dicenotation=\"1d6+2\" data-rolltype=\"damage\" data-rollaction=\"Shortbow\" data-rolldamagetype=\"piercing\">(1d6 + 2)</span> piercing damage.</p>",
+  "reactionsDescription": "",
+  "legendaryActionsDescription": "",
+  "mythicActionsDescription": "",
+  "bonusActionsDescription": "",
+  "characteristicsDescription": "<p>Goblins are small, black-hearted humanoids that lair in despoiled dungeons and other dismal settings. Individually weak, they gather in large numbers to torment other creatures.</p>",
+  "lairDescription": "",
+  "languageDescription": " Common, Goblin  ",
+  "languageNote": "",
+  "hideCr": false,
+  "isLegacy": true
+}
