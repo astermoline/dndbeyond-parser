@@ -39,6 +39,9 @@ export interface ItemData {
   originalName?: string;
   type: string;
   rarity?: string;
+  isHomebrew?: boolean;
+  isCustomized?: boolean;
+  isCustomItem?: boolean;
   requiresAttunement: boolean;
   attunementDescription?: string;
   weight?: number;

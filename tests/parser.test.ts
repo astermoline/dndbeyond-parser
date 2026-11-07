@@ -88,18 +88,22 @@ describe('Character Parser', () => {
     expect(bandCase).toBeDefined();
     expect(bandCase?.name).toBe("Bard's Band Case");
     expect(bandCase?.originalName).toBe('Pouch');
+    expect(bandCase?.isCustomized).toBe(true);
     expect(bandCase?.weight).toBe(2);
     expect(bandCase?.totalWeight).toBe(2);
 
     // Riz customized Potion of Hill Giant Strength (id: 750272035) with custom note
     const potion = char.inventory.find((i) => i.id === 750272035);
     expect(potion).toBeDefined();
+    expect(potion?.isCustomized).toBe(true);
     expect(potion?.notes).toContain("Notes: Will disappear if Riz Casts Tasha's Bubbling Cauldron again");
 
     // Riz added customItem "Harp" (id: 25282084) directly on the character sheet
     const harp = char.inventory.find((i) => i.id === 25282084);
     expect(harp).toBeDefined();
     expect(harp?.name).toBe('Harp');
+    expect(harp?.isCustomItem).toBe(true);
+    expect(harp?.isCustomized).toBe(true);
     expect(harp?.weight).toBe(1);
     expect(harp?.totalWeight).toBe(1);
 
@@ -153,6 +157,37 @@ describe('Character Parser', () => {
             description: '<p>A simple dagger.</p>',
           },
         },
+        {
+          id: 1116959863,
+          entityTypeId: 1439493548,
+          equipped: true,
+          quantity: 1,
+          definition: {
+            id: 12159941,
+            name: 'Bramble-Star',
+            filterType: 'Wondrous item',
+            rarity: 'Common',
+            isHomebrew: true,
+            weight: 3,
+            description: '<p>Hand-crafted broom.</p>',
+          },
+        },
+        {
+          id: 1087548405,
+          entityTypeId: 1439493548,
+          equipped: true,
+          quantity: 1,
+          definition: {
+            id: 5,
+            name: 'Leather',
+            filterType: 'Armor',
+            rarity: 'Common',
+            isHomebrew: false,
+            weight: 10,
+            cost: 10,
+            description: '<p>Leather armor.</p>',
+          },
+        },
       ],
       classSpells: [
         {
@@ -190,15 +225,25 @@ describe('Character Parser', () => {
     const bag = char.inventory.find((i) => i.id === 1116957527);
     expect(bag?.name).toBe('Aldershine Messenger Bag');
     expect(bag?.originalName).toBe('Sack');
+    expect(bag?.isCustomized).toBe(true);
     expect(bag?.cost).toBe('0.5 gp');
     expect(bag?.description).toContain('**Notes:** Line 1\nLine 2');
 
     const dagger = char.inventory.find((i) => i.id === 999001);
+    expect(dagger?.isCustomized).toBe(true);
     expect(dagger?.weight).toBe(0);
     expect(dagger?.totalWeight).toBe(0);
     expect(dagger?.notes).toContain('Properties: Finesse, Light, Silvered, Adamantine');
     expect(dagger?.notes).toContain('To-Hit Bonus: +1');
     expect(dagger?.notes).toContain('Damage Bonus: +2');
+
+    const broom = char.inventory.find((i) => i.id === 1116959863);
+    expect(broom?.isHomebrew).toBe(true);
+    expect(broom?.isCustomized).toBeUndefined();
+
+    const leather = char.inventory.find((i) => i.id === 1087548405);
+    expect(leather?.isHomebrew).toBeUndefined();
+    expect(leather?.isCustomized).toBeUndefined();
 
     const cantrips = char.spellcasting?.groups[0] || [];
     expect(cantrips[0]?.name).toBe('Starlight Blast');

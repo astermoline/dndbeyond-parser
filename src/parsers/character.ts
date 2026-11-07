@@ -400,18 +400,27 @@ export function parseCharacterJson(d: any): CharacterData {
   const inventory: InventoryItemData[] = (d.inventory || []).map((item: any) => {
     const def = item.definition || {};
     const qty = item.quantity ?? 1;
+    const isHomebrew = Boolean(def.isHomebrew || item.isHomebrew);
+    const isCustomItem = Boolean(def.isCustomItem || item.isCustomItem);
+    let hasCustomization = isCustomItem;
 
     const rawCustomName = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 8);
     const customName = typeof rawCustomName === 'string' && rawCustomName.trim() ? rawCustomName.trim() : undefined;
     const baseName = def.name || 'Unknown Item';
     const name = customName || baseName;
     const originalName = customName && customName !== baseName ? baseName : undefined;
+    if (originalName) {
+      hasCustomization = true;
+    }
 
     const rawCustomWeight = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 22);
     const parsedCustomWeight =
       rawCustomWeight !== undefined && rawCustomWeight !== null && rawCustomWeight !== ''
         ? Number(rawCustomWeight)
         : NaN;
+    if (!Number.isNaN(parsedCustomWeight)) {
+      hasCustomization = true;
+    }
     const wt = !Number.isNaN(parsedCustomWeight) ? parsedCustomWeight : (def.weight || 0);
     const totalWeight = parseFloat((qty * wt).toFixed(1));
 
@@ -420,6 +429,9 @@ export function parseCharacterJson(d: any): CharacterData {
       rawCustomCost !== undefined && rawCustomCost !== null && rawCustomCost !== ''
         ? Number(rawCustomCost)
         : NaN;
+    if (!Number.isNaN(parsedCustomCost)) {
+      hasCustomization = true;
+    }
     const costVal = !Number.isNaN(parsedCustomCost) ? parsedCustomCost : def.cost;
     const cost =
       costVal !== undefined && costVal !== null && costVal !== '' && (!Number.isNaN(parsedCustomCost) || Boolean(costVal))
@@ -429,11 +441,21 @@ export function parseCharacterJson(d: any): CharacterData {
     const propNames: string[] = Array.isArray(def.properties)
       ? def.properties.map((p: any) => p?.name).filter(Boolean)
       : [];
-    if (getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 20) && !propNames.includes('Silvered')) {
-      propNames.push('Silvered');
+    if (getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 20)) {
+      hasCustomization = true;
+      if (!propNames.includes('Silvered')) propNames.push('Silvered');
     }
-    if (getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 21) && !propNames.includes('Adamantine')) {
-      propNames.push('Adamantine');
+    if (getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 21)) {
+      hasCustomization = true;
+      if (!propNames.includes('Adamantine')) propNames.push('Adamantine');
+    }
+    if (getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 28)) {
+      hasCustomization = true;
+      if (!propNames.includes('Pact Weapon')) propNames.push('Pact Weapon');
+    }
+    if (getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 29)) {
+      hasCustomization = true;
+      if (!propNames.includes('Hex Weapon')) propNames.push('Hex Weapon');
     }
 
     const notes: string[] = [];
@@ -441,10 +463,20 @@ export function parseCharacterJson(d: any): CharacterData {
       notes.push(`Properties: ${propNames.join(', ')}`);
     }
 
+    const rawToHitOverride = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 13);
+    if (rawToHitOverride !== undefined && rawToHitOverride !== null && rawToHitOverride !== '') {
+      const num = Number(rawToHitOverride);
+      if (!Number.isNaN(num)) {
+        hasCustomization = true;
+        notes.push(`To-Hit Override: ${num >= 0 ? `+${num}` : num}`);
+      }
+    }
+
     const rawToHitBonus = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 12);
     if (rawToHitBonus !== undefined && rawToHitBonus !== null && rawToHitBonus !== '') {
       const num = Number(rawToHitBonus);
       if (!Number.isNaN(num) && num !== 0) {
+        hasCustomization = true;
         notes.push(`To-Hit Bonus: ${num > 0 ? `+${num}` : num}`);
       }
     }
@@ -453,15 +485,36 @@ export function parseCharacterJson(d: any): CharacterData {
     if (rawDamageBonus !== undefined && rawDamageBonus !== null && rawDamageBonus !== '') {
       const num = Number(rawDamageBonus);
       if (!Number.isNaN(num) && num !== 0) {
+        hasCustomization = true;
         notes.push(`Damage Bonus: ${num > 0 ? `+${num}` : num}`);
       } else if (Number.isNaN(num) && String(rawDamageBonus).trim()) {
+        hasCustomization = true;
         notes.push(`Damage Bonus: ${String(rawDamageBonus).trim()}`);
+      }
+    }
+
+    const rawSaveDcOverride = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 15);
+    if (rawSaveDcOverride !== undefined && rawSaveDcOverride !== null && rawSaveDcOverride !== '') {
+      const num = Number(rawSaveDcOverride);
+      if (!Number.isNaN(num)) {
+        hasCustomization = true;
+        notes.push(`Save DC: ${num}`);
+      }
+    }
+
+    const rawSaveDcBonus = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 14);
+    if (rawSaveDcBonus !== undefined && rawSaveDcBonus !== null && rawSaveDcBonus !== '') {
+      const num = Number(rawSaveDcBonus);
+      if (!Number.isNaN(num) && num !== 0) {
+        hasCustomization = true;
+        notes.push(`Save DC Bonus: ${num > 0 ? `+${num}` : num}`);
       }
     }
 
     let description = htmlToMarkdown(def.description);
     const rawCustomNotes = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 9);
     if (typeof rawCustomNotes === 'string' && rawCustomNotes.trim()) {
+      hasCustomization = true;
       const cleanedNotes = rawCustomNotes.replace(/\r\n/g, '\n').trim();
       if (cleanedNotes.includes('\n')) {
         description = description ? `**Notes:** ${cleanedNotes}\n\n${description}` : `**Notes:** ${cleanedNotes}`;
@@ -476,6 +529,9 @@ export function parseCharacterJson(d: any): CharacterData {
       ...(originalName ? { originalName } : {}),
       type: def.filterType || 'Gear',
       rarity: def.rarity || undefined,
+      ...(isHomebrew ? { isHomebrew: true } : {}),
+      ...(isCustomItem ? { isCustomItem: true } : {}),
+      ...(hasCustomization ? { isCustomized: true } : {}),
       requiresAttunement: Boolean(def.canAttune),
       attunementDescription: def.attunementDescription || undefined,
       weight: wt,
@@ -524,6 +580,8 @@ export function parseCharacterJson(d: any): CharacterData {
         id: ci.id,
         name: String(ci.name).trim(),
         type: ci.type || 'Other Gear',
+        isCustomItem: true,
+        isCustomized: true,
         requiresAttunement: false,
         weight: wt,
         cost,

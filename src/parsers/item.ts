@@ -74,6 +74,13 @@ export function parseItemTooltipJson(tooltipObj: any): ItemData {
     }
   }
 
+  // Extract subtitle (e.g. "Homebrew" or book title)
+  const subtitleMatch = rawHtml.match(/<div class="tooltip-header-subtitle"[^>]*>([\s\S]*?)<\/div>/i);
+  const subtitle = subtitleMatch ? subtitleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+  const isHomebrew =
+    Boolean(tooltipObj?.IsHomebrew || tooltipObj?.isHomebrew) ||
+    subtitle.toLowerCase().includes('homebrew');
+
   // Extract description
   const descMatch = rawHtml.match(/<div class="tooltip-body-description-text"[^>]*>([\s\S]*?)<\/div>/i);
   const descHtml = descMatch ? descMatch[1] : rawHtml;
@@ -84,6 +91,7 @@ export function parseItemTooltipJson(tooltipObj: any): ItemData {
     name,
     type,
     rarity,
+    ...(isHomebrew ? { isHomebrew: true } : {}),
     requiresAttunement,
     attunementDescription,
     image,
@@ -173,11 +181,19 @@ export function parseItemDom(root: HTMLElement | Document): ItemData {
   // Source
   const sourceEl = root.querySelector('.item-source');
   const source = sourceEl?.textContent?.trim() || undefined;
+  const isHomebrew =
+    Boolean(source && source.toLowerCase().includes('homebrew')) ||
+    Boolean(
+      root.querySelector(
+        '.homebrew-comments, .ddb-homebrew-badge, .badge-homebrew, .homebrew-creation-actions'
+      )
+    );
 
   return {
     name,
     type,
     rarity,
+    ...(isHomebrew ? { isHomebrew: true } : {}),
     requiresAttunement,
     attunementDescription,
     image,
