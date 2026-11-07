@@ -36,6 +36,7 @@ export interface CharacterFeatureData {
 export interface ItemData {
   id?: string | number;
   name: string;
+  originalName?: string;
   type: string;
   rarity?: string;
   requiresAttunement: boolean;
@@ -59,6 +60,7 @@ export interface InventoryItemData extends ItemData {
 export interface SpellData {
   id?: string | number;
   name: string;
+  originalName?: string;
   level: number;
   school: string;
   castingTime: string;

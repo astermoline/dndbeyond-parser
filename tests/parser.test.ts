@@ -79,6 +79,132 @@ describe('Character Parser', () => {
     const sampleUrl = 'https://www.dndbeyond.com/avatars/59417/207/1581111423-170163364.jpeg?width=150&height=150&fit=crop&quality=95&auto=webp';
     expect(cleanDdbImageUrl(sampleUrl)).toBe('https://www.dndbeyond.com/avatars/59417/207/1581111423-170163364.jpeg');
   });
+
+  it('applies D&D Beyond characterValues item customizations and includes customItems', () => {
+    const char = parseCharacterJson(rizJson);
+
+    // Riz customized Pouch (id: 711137239) -> "Bard's Band Case" with weight override 2
+    const bandCase = char.inventory.find((i) => i.id === 711137239);
+    expect(bandCase).toBeDefined();
+    expect(bandCase?.name).toBe("Bard's Band Case");
+    expect(bandCase?.originalName).toBe('Pouch');
+    expect(bandCase?.weight).toBe(2);
+    expect(bandCase?.totalWeight).toBe(2);
+
+    // Riz customized Potion of Hill Giant Strength (id: 750272035) with custom note
+    const potion = char.inventory.find((i) => i.id === 750272035);
+    expect(potion).toBeDefined();
+    expect(potion?.notes).toContain("Notes: Will disappear if Riz Casts Tasha's Bubbling Cauldron again");
+
+    // Riz added customItem "Harp" (id: 25282084) directly on the character sheet
+    const harp = char.inventory.find((i) => i.id === 25282084);
+    expect(harp).toBeDefined();
+    expect(harp?.name).toBe('Harp');
+    expect(harp?.weight).toBe(1);
+    expect(harp?.totalWeight).toBe(1);
+
+    const md = characterToMarkdown(char);
+    expect(md).toContain("#### Bard's Band Case");
+    expect(md).not.toContain('#### Pouch');
+    expect(md).toContain("Notes: Will disappear if Riz Casts Tasha's Bubbling Cauldron again");
+    expect(md).toContain('#### Harp');
+  });
+
+  it('supports cost overrides, weapon bonuses, silvered/adamantine properties, and spell customizations', () => {
+    const customPayload = {
+      id: 170163364,
+      name: 'Stella Aldershine',
+      classes: [{ level: 3, definition: { name: 'Warlock', spellCastingAbilityId: 6 } }],
+      stats: [
+        { id: 1, value: 10 },
+        { id: 2, value: 16 },
+        { id: 3, value: 14 },
+        { id: 4, value: 10 },
+        { id: 5, value: 14 },
+        { id: 6, value: 18 },
+      ],
+      inventory: [
+        {
+          id: 1116957527,
+          entityTypeId: 1439493548,
+          equipped: true,
+          quantity: 1,
+          definition: {
+            id: 422,
+            name: 'Sack',
+            filterType: 'Other Gear',
+            weight: 0.5,
+            cost: 0.01,
+            description: '<p>A sack holds up to 30 pounds.</p>',
+          },
+        },
+        {
+          id: 999001,
+          entityTypeId: 1439493548,
+          equipped: true,
+          quantity: 1,
+          definition: {
+            id: 10,
+            name: 'Dagger',
+            filterType: 'Weapon',
+            weight: 1,
+            cost: 2,
+            properties: [{ name: 'Finesse' }, { name: 'Light' }],
+            description: '<p>A simple dagger.</p>',
+          },
+        },
+      ],
+      classSpells: [
+        {
+          spells: [
+            {
+              id: 888001,
+              entityTypeId: 435869154,
+              prepared: true,
+              definition: {
+                id: 2001,
+                name: 'Eldritch Blast',
+                level: 0,
+                school: 'Evocation',
+                description: '<p>A beam of crackling energy.</p>',
+              },
+            },
+          ],
+        },
+      ],
+      characterValues: [
+        { typeId: 8, value: 'Aldershine Messenger Bag', valueId: '1116957527', valueTypeId: '1439493548' },
+        { typeId: 19, value: 0.5, valueId: '1116957527', valueTypeId: '1439493548' },
+        { typeId: 9, value: 'Line 1\nLine 2', valueId: '1116957527', valueTypeId: '1439493548' },
+        { typeId: 20, value: true, valueId: '999001', valueTypeId: '1439493548' },
+        { typeId: 21, value: true, valueId: '999001', valueTypeId: '1439493548' },
+        { typeId: 12, value: 1, valueId: '999001', valueTypeId: '1439493548' },
+        { typeId: 10, value: 2, valueId: '999001', valueTypeId: '1439493548' },
+        { typeId: 22, value: 0, valueId: '999001', valueTypeId: '1439493548' },
+        { typeId: 8, value: 'Starlight Blast', valueId: '888001', valueTypeId: '435869154' },
+        { typeId: 9, value: 'Fires purple sparks', valueId: '888001', valueTypeId: '435869154' },
+      ],
+    };
+
+    const char = parseCharacterJson(customPayload);
+    const bag = char.inventory.find((i) => i.id === 1116957527);
+    expect(bag?.name).toBe('Aldershine Messenger Bag');
+    expect(bag?.originalName).toBe('Sack');
+    expect(bag?.cost).toBe('0.5 gp');
+    expect(bag?.description).toContain('**Notes:** Line 1\nLine 2');
+
+    const dagger = char.inventory.find((i) => i.id === 999001);
+    expect(dagger?.weight).toBe(0);
+    expect(dagger?.totalWeight).toBe(0);
+    expect(dagger?.notes).toContain('Properties: Finesse, Light, Silvered, Adamantine');
+    expect(dagger?.notes).toContain('To-Hit Bonus: +1');
+    expect(dagger?.notes).toContain('Damage Bonus: +2');
+
+    const cantrips = char.spellcasting?.groups[0] || [];
+    expect(cantrips[0]?.name).toBe('Starlight Blast');
+    expect(cantrips[0]?.originalName).toBe('Eldritch Blast');
+    expect(cantrips[0]?.description).toContain('**Notes:** Fires purple sparks');
+  });
 });
 
 describe('Monster Parser', () => {

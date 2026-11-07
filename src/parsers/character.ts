@@ -136,6 +136,44 @@ export async function fetchCharacterById(
   return parseCharacterJson(json.data);
 }
 
+/**
+ * Looks up a character sheet customization value from D&D Beyond's `characterValues` array.
+ * Common `typeId`s:
+ * - 8: Custom Name (string)
+ * - 9: Custom Notes (string)
+ * - 10: Damage Bonus (number | string)
+ * - 12: To-Hit Bonus (number)
+ * - 19: Cost Override in gp (number)
+ * - 20: Silvered (boolean)
+ * - 21: Adamantine (boolean)
+ * - 22: Weight Override in lbs (number)
+ */
+export function getCharacterCustomValue(
+  characterValues: any[] | undefined,
+  entityId: string | number | undefined | null,
+  entityTypeId: string | number | undefined | null,
+  typeId: number
+): any {
+  if (!Array.isArray(characterValues) || entityId === undefined || entityId === null) {
+    return undefined;
+  }
+  const idStr = String(entityId);
+  const typeIdStr = entityTypeId !== undefined && entityTypeId !== null ? String(entityTypeId) : null;
+
+  for (let i = characterValues.length - 1; i >= 0; i--) {
+    const cv = characterValues[i];
+    if (!cv || cv.typeId !== typeId || String(cv.valueId) !== idStr) continue;
+    if (typeIdStr !== null && cv.valueTypeId !== undefined && cv.valueTypeId !== null) {
+      if (String(cv.valueTypeId) !== typeIdStr) continue;
+    }
+    if (cv.value !== undefined && cv.value !== null) {
+      return cv.value;
+    }
+  }
+
+  return undefined;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function parseCharacterJson(d: any): CharacterData {
   if (!d || typeof d !== 'object') {
@@ -293,15 +331,31 @@ export function parseCharacterJson(d: any): CharacterData {
   // 8. Features & Traits
   const features: CharacterFeatureData[] = [];
 
+  const resolveFeatureNameAndDesc = (def: any) => {
+    const rawCustomName = getCharacterCustomValue(d.characterValues, def.id, def.entityTypeId, 8);
+    const customName = typeof rawCustomName === 'string' && rawCustomName.trim() ? rawCustomName.trim() : undefined;
+    let desc = htmlToMarkdown(def.description);
+    const rawCustomNotes = getCharacterCustomValue(d.characterValues, def.id, def.entityTypeId, 9);
+    if (typeof rawCustomNotes === 'string' && rawCustomNotes.trim()) {
+      const cleanedNotes = rawCustomNotes.replace(/\r\n/g, '\n').trim();
+      desc = desc ? `**Notes:** ${cleanedNotes}\n\n${desc}` : `**Notes:** ${cleanedNotes}`;
+    }
+    return {
+      name: customName || def.name,
+      description: desc,
+    };
+  };
+
   // Racial traits
   if (d.race?.racialTraits) {
     d.race.racialTraits.forEach((trait: any) => {
       const t = trait.definition;
       if (t && !t.hideInSheet) {
+        const resolved = resolveFeatureNameAndDesc(t);
         features.push({
-          name: t.name,
+          name: resolved.name,
           type: 'Species Trait',
-          description: htmlToMarkdown(t.description),
+          description: resolved.description,
         });
       }
     });
@@ -314,11 +368,12 @@ export function parseCharacterJson(d: any): CharacterData {
         cls.classFeatures.forEach((feat: any) => {
           const f = feat.definition;
           if (f && !f.hideInSheet && cls.level >= feat.requiredLevel) {
+            const resolved = resolveFeatureNameAndDesc(f);
             features.push({
-              name: f.name,
+              name: resolved.name,
               type: 'Class Feature',
               source: cls.definition?.name,
-              description: htmlToMarkdown(f.description),
+              description: resolved.description,
             });
           }
         });
@@ -331,10 +386,11 @@ export function parseCharacterJson(d: any): CharacterData {
     d.feats.forEach((feat: any) => {
       const f = feat.definition;
       if (f) {
+        const resolved = resolveFeatureNameAndDesc(f);
         features.push({
-          name: f.name,
+          name: resolved.name,
           type: 'Feat',
-          description: htmlToMarkdown(f.description),
+          description: resolved.description,
         });
       }
     });
@@ -343,26 +399,89 @@ export function parseCharacterJson(d: any): CharacterData {
   // 9. Inventory
   const inventory: InventoryItemData[] = (d.inventory || []).map((item: any) => {
     const def = item.definition || {};
-    const qty = item.quantity || 1;
-    const wt = def.weight || 0;
+    const qty = item.quantity ?? 1;
+
+    const rawCustomName = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 8);
+    const customName = typeof rawCustomName === 'string' && rawCustomName.trim() ? rawCustomName.trim() : undefined;
+    const baseName = def.name || 'Unknown Item';
+    const name = customName || baseName;
+    const originalName = customName && customName !== baseName ? baseName : undefined;
+
+    const rawCustomWeight = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 22);
+    const parsedCustomWeight =
+      rawCustomWeight !== undefined && rawCustomWeight !== null && rawCustomWeight !== ''
+        ? Number(rawCustomWeight)
+        : NaN;
+    const wt = !Number.isNaN(parsedCustomWeight) ? parsedCustomWeight : (def.weight || 0);
     const totalWeight = parseFloat((qty * wt).toFixed(1));
 
+    const rawCustomCost = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 19);
+    const parsedCustomCost =
+      rawCustomCost !== undefined && rawCustomCost !== null && rawCustomCost !== ''
+        ? Number(rawCustomCost)
+        : NaN;
+    const costVal = !Number.isNaN(parsedCustomCost) ? parsedCustomCost : def.cost;
+    const cost =
+      costVal !== undefined && costVal !== null && costVal !== '' && (!Number.isNaN(parsedCustomCost) || Boolean(costVal))
+        ? `${costVal} gp`
+        : undefined;
+
+    const propNames: string[] = Array.isArray(def.properties)
+      ? def.properties.map((p: any) => p?.name).filter(Boolean)
+      : [];
+    if (getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 20) && !propNames.includes('Silvered')) {
+      propNames.push('Silvered');
+    }
+    if (getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 21) && !propNames.includes('Adamantine')) {
+      propNames.push('Adamantine');
+    }
+
     const notes: string[] = [];
-    if (def.properties && def.properties.length > 0) {
-      notes.push(`Properties: ${def.properties.map((p: any) => p.name).join(', ')}`);
+    if (propNames.length > 0) {
+      notes.push(`Properties: ${propNames.join(', ')}`);
+    }
+
+    const rawToHitBonus = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 12);
+    if (rawToHitBonus !== undefined && rawToHitBonus !== null && rawToHitBonus !== '') {
+      const num = Number(rawToHitBonus);
+      if (!Number.isNaN(num) && num !== 0) {
+        notes.push(`To-Hit Bonus: ${num > 0 ? `+${num}` : num}`);
+      }
+    }
+
+    const rawDamageBonus = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 10);
+    if (rawDamageBonus !== undefined && rawDamageBonus !== null && rawDamageBonus !== '') {
+      const num = Number(rawDamageBonus);
+      if (!Number.isNaN(num) && num !== 0) {
+        notes.push(`Damage Bonus: ${num > 0 ? `+${num}` : num}`);
+      } else if (Number.isNaN(num) && String(rawDamageBonus).trim()) {
+        notes.push(`Damage Bonus: ${String(rawDamageBonus).trim()}`);
+      }
+    }
+
+    let description = htmlToMarkdown(def.description);
+    const rawCustomNotes = getCharacterCustomValue(d.characterValues, item.id, item.entityTypeId, 9);
+    if (typeof rawCustomNotes === 'string' && rawCustomNotes.trim()) {
+      const cleanedNotes = rawCustomNotes.replace(/\r\n/g, '\n').trim();
+      if (cleanedNotes.includes('\n')) {
+        description = description ? `**Notes:** ${cleanedNotes}\n\n${description}` : `**Notes:** ${cleanedNotes}`;
+      } else {
+        notes.push(`Notes: ${cleanedNotes}`);
+      }
     }
 
     return {
       id: item.id || def.id,
-      name: def.name || 'Unknown Item',
+      name,
+      ...(originalName ? { originalName } : {}),
       type: def.filterType || 'Gear',
       rarity: def.rarity || undefined,
       requiresAttunement: Boolean(def.canAttune),
       attunementDescription: def.attunementDescription || undefined,
       weight: wt,
-      cost: def.cost ? `${def.cost} gp` : undefined,
+      cost,
       image: cleanDdbImageUrl(def.largeAvatarUrl || def.avatarUrl),
-      description: htmlToMarkdown(def.description),
+      description,
       notes: notes.length ? notes : undefined,
       tags: def.tags || [],
       source: def.sources?.[0]?.sourceId ? `Source ID ${def.sources[0].sourceId}` : undefined,
@@ -373,6 +492,52 @@ export function parseCharacterJson(d: any): CharacterData {
     };
   });
 
+  // Custom items added directly on the D&D Beyond character sheet
+  if (Array.isArray(d.customItems)) {
+    d.customItems.forEach((ci: any) => {
+      if (!ci || !ci.name) return;
+      const qty = ci.quantity ?? 1;
+      const parsedWt = ci.weight !== undefined && ci.weight !== null && ci.weight !== '' ? Number(ci.weight) : 0;
+      const wt = !Number.isNaN(parsedWt) ? parsedWt : 0;
+      const totalWeight = parseFloat((qty * wt).toFixed(1));
+
+      let cost: string | undefined = undefined;
+      if (ci.cost !== undefined && ci.cost !== null && ci.cost !== '') {
+        const costStr = String(ci.cost).trim();
+        if (costStr && Number(costStr) !== 0) {
+          cost = /[a-z]/i.test(costStr) ? costStr : `${costStr} gp`;
+        }
+      }
+
+      const notes: string[] = [];
+      let description = htmlToMarkdown(ci.description || '');
+      if (typeof ci.notes === 'string' && ci.notes.trim()) {
+        const cleanedNotes = ci.notes.replace(/\r\n/g, '\n').trim();
+        if (cleanedNotes.includes('\n')) {
+          description = description ? `**Notes:** ${cleanedNotes}\n\n${description}` : `**Notes:** ${cleanedNotes}`;
+        } else {
+          notes.push(`Notes: ${cleanedNotes}`);
+        }
+      }
+
+      inventory.push({
+        id: ci.id,
+        name: String(ci.name).trim(),
+        type: ci.type || 'Other Gear',
+        requiresAttunement: false,
+        weight: wt,
+        cost,
+        description,
+        notes: notes.length ? notes : undefined,
+        tags: [],
+        quantity: qty,
+        equipped: Boolean(ci.equipped),
+        totalWeight,
+        containerId: ci.containerEntityId || null,
+      });
+    });
+  }
+
   // 10. Spells (Class, Subclass, Feat, Race, Item, Background)
   const spellMap = new Map<string, SpellData>();
 
@@ -380,7 +545,12 @@ export function parseCharacterJson(d: any): CharacterData {
     const def = spellObj?.definition;
     if (!def || !def.name) return;
 
-    if (!spellMap.has(def.name)) {
+    const rawCustomName = getCharacterCustomValue(d.characterValues, spellObj.id, spellObj.entityTypeId, 8);
+    const customName = typeof rawCustomName === 'string' && rawCustomName.trim() ? rawCustomName.trim() : undefined;
+    const spellName = customName || def.name;
+    const originalName = customName && customName !== def.name ? def.name : undefined;
+
+    if (!spellMap.has(spellName)) {
       const act = def.activation;
       let castTime = '1 Action';
       if (act) {
@@ -409,15 +579,24 @@ export function parseCharacterJson(d: any): CharacterData {
         ? `${def.duration.durationInterval || ''} ${def.duration.durationUnit || ''}`.trim() || def.duration.durationType || 'Instantaneous'
         : 'Instantaneous';
 
-      spellMap.set(def.name, {
-        name: def.name,
+      let description = htmlToMarkdown(def.description);
+      const rawCustomNotes = getCharacterCustomValue(d.characterValues, spellObj.id, spellObj.entityTypeId, 9);
+      if (typeof rawCustomNotes === 'string' && rawCustomNotes.trim()) {
+        const cleanedNotes = rawCustomNotes.replace(/\r\n/g, '\n').trim();
+        description = description ? `**Notes:** ${cleanedNotes}\n\n${description}` : `**Notes:** ${cleanedNotes}`;
+      }
+
+      spellMap.set(spellName, {
+        id: spellObj.id ?? def.id,
+        name: spellName,
+        ...(originalName ? { originalName } : {}),
         level: def.level || 0,
         school: def.school || 'Unknown',
         castingTime: castTime,
         range: rangeVal,
         components: compStr,
         duration,
-        description: htmlToMarkdown(def.description),
+        description,
         source,
         prepared: Boolean(spellObj.prepared),
         alwaysPrepared: Boolean(spellObj.alwaysPrepared),
